@@ -1,9 +1,72 @@
 # Team Task Manager
 
-Full-stack app: **signup/login**, **projects** with **Admin/Member** roles, **tasks** (assign, status, due dates), and a **dashboard** (counts, overdue, your open work).
+**Team Task Manager** (branded **Team Tasks** in the UI) is a full-stack web application for small teams who want a single place to organize work: accounts, shared **projects**, role-based access (**Admin** / **Member**), and a **task board** with statuses and due dates, plus a **dashboard** that highlights overdue work and your own open tasks.
 
-- **API**: Express + Prisma + PostgreSQL (REST, validation with Zod, JWT session cookie).
-- **Web UI**: React + Vite (same origin as API in production).
+---
+
+## About the project
+
+The goal is to keep collaboration simple. Each **project** is a workspace with its own members and tasks. The person who creates a project becomes an **Admin** and can invite others by email; invitees must **sign up first** with that email so they exist in the system before they can be added. **Members** can view and update tasks on projects they belong to; **Admins** can also manage project metadata (via the API) and manage membership—invite teammates, change roles, or remove people from the project.
+
+Tasks follow a lightweight workflow—**To do**, **In progress**, and **Done**—without drag-and-drop complexity: you change status, assignee, and due date directly on each task card. A **dashboard** aggregates counts across all your projects, lists **overdue** items with links back to the right project, and shows **my open tasks** (tasks **assigned to you** or **created by you** that are not yet **Done**). In production, the **React** app and **Express** API are served from the **same origin**, which keeps **HTTP-only session cookies** and CORS configuration straightforward.
+
+---
+
+## Features
+
+### Authentication & accounts
+
+- **Sign up** with email, display name, and password (minimum length enforced server-side; optional **password strength** feedback in the UI).
+- **Log in** / **log out**; protected routes redirect unauthenticated users to the login page.
+- Passwords stored with **bcrypt**; login and signup errors use **generic messages** where appropriate to avoid leaking whether an email is registered.
+- Session uses an **HTTP-only** cookie (`ttm_session`) carrying a **JWT**; the API can also accept `Authorization: Bearer <token>` if needed.
+
+### Projects
+
+- **List projects** you belong to, with **task counts** and your **role** (Admin or Member) on each.
+- **Create a project** with a **name** and optional **description**; the creator is automatically the project **Admin**.
+- **Project detail** page shows the description, your role, breadcrumbs, and splits the screen between **tasks** and **team** management.
+- **Admins** can rename or update a project (or delete it) via the **REST API** (`PATCH` / `DELETE` on `/api/projects/:projectId`); the web UI centers on tasks and membership.
+
+### Tasks & board
+
+- **Three-column board**: *To do*, *In progress*, and *Done*—tasks are grouped by status with counts per column.
+- **Create tasks** with a title and optional **due date** from the project page.
+- On each **task card**: change **status**, **assignee** (any project member or unassigned), and **due date**; **delete** a task (with confirmation).
+- **Search / filter** tasks by title, description text, or assignee name.
+- Task model supports optional **description** (shown on the card when present; full create/update fields are available on the **REST API**).
+
+### Team & roles
+
+- **Admins** invite users by **email**, choosing **Member** or **Admin** at invite time.
+- **Admins** can **change a member’s role** between Member and Admin, or **remove** someone from the project (with confirmation).
+- **Members** see the team list but cannot invite, remove, or change roles unless they are promoted to Admin.
+
+### Dashboard
+
+- **Summary stats**: counts for *To do*, *In progress*, *Done*, and **overdue** tasks across all projects you can access.
+- **Overdue** section with links into the owning project; **My open tasks** lists work that is still open and relevant to you, with due hints and status pills.
+- **Empty state** when you have no active workload, with a shortcut to create or join projects.
+
+### User experience
+
+- App shell with **Dashboard** and **Projects** navigation, **user chip** (name / email), and **log out**.
+- **Toast** notifications for success and errors; **loading** skeletons where appropriate; **empty states** with short guidance.
+- Responsive **top bar** with a collapsible menu on smaller screens.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| **Web UI** | React, TypeScript, Vite, React Router |
+| **API** | Node.js, Express, REST |
+| **Data** | PostgreSQL, Prisma ORM (migrations in `server/prisma/migrations`) |
+| **Validation** | Zod (request bodies and query shapes) |
+| **Auth** | JWT in HTTP-only cookie, bcrypt for password hashes |
+| **Monorepo** | npm **workspaces** (`client/`, `server/`), single `npm run build` and `npm run start` from the repo root |
+| **Deploy** | One Node process serves the API and static client build (e.g. **Railway**); see `railway.toml` |
 
 **Requirements:** Node **≥ 20.6** (for `npm run db:push` / `db:migrate`, which use `node --env-file=.env`).
 
@@ -61,7 +124,10 @@ Push this repo to GitHub (if it is not already). Railway will deploy from that r
 ### 4. Wire the database to the app
 
 1. Open your **Node (web)** service → **Variables**.
-2. Add **`DATABASE_URL`**: click **Add variable** → **Variable reference** → choose the **Postgres** service → **`DATABASE_URL`** (Railway’s private URL is fine here; app and DB run inside Railway).
+2. Add **`DATABASE_URL`**: use the variable picker to reference **Postgres → `DATABASE_URL`**, or in **Raw Editor** set  
+   `DATABASE_URL=${{ YourPostgresServiceName.DATABASE_URL }}`  
+   using the **exact Postgres service name** shown on the project canvas (Railway’s [reference syntax](https://docs.railway.com/variables#referencing-another-services-variable)).
+3. If a purple **staged changes** banner appears on the canvas, open **Details** → **Deploy** so the new variables are applied (new env vars do not affect already-running containers until you deploy / redeploy).
 
 ### 5. Expose a public URL
 
