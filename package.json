@@ -1,0 +1,26 @@
+{
+  "name": "team-task-manager",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "node scripts/start.mjs",
+    "db:generate": "npm run db:generate -w server",
+    "db:push": "node --env-file=.env node_modules/prisma/build/index.js db push --schema=server/prisma/schema.prisma",
+    "db:migrate": "node --env-file=.env node_modules/prisma/build/index.js migrate dev --schema=server/prisma/schema.prisma",
+    "postinstall": "npm run db:generate -w server"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
